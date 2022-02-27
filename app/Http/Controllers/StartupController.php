@@ -6,21 +6,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\MediaLinker;
+use App\Helpers\Responder;
 
 class StartupController extends Controller
 {
-    private function deleteMedia($media)
-    {
-        foreach ($media as $i)
-            Http::delete(config('api.API_MEDIA') . '/media/' . $i->id);
-    }
-
     public function create(Request $request)
     {
         if (Gate::allows('creator')) {
-            $data = $request->only('documents', 'name', 'ending_at', 'funds_goal', 'description');
+            $data = $request->only('files', 'name', 'ending_at', 'funds_goal', 'description');
             $validator = Validator::make($data, [
-                'documents.*' => 'required|file|mimes:jpg,bmp,png,pdf',
+                'files' => 'required',
+                'files.*' => 'file|image|max:5120',
                 'name' => 'required|string|min:10',
                 'description' => 'required|string|min:10',
                 'funds_goal' => 'required|integer|min:500|max:10000000',
@@ -29,50 +26,35 @@ class StartupController extends Controller
             if ($validator->fails())
                 return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
 
+            $response = Http::get(config('api.API_FEED_CONTENT') . '/startup', [
+                'userId' => $request->user(),
+            ]);
+            if ($response->getStatusCode() != 200)
+                return Responder::error($response, 'API_FEED_CONTENT:startup:get');
+
+            $startups = collect($response->object());
+            if ($startups->pluck('status')->contains('Created'))
+                return response()->json(['message' => 'Already exists'], 409);
+
             $response = Http::post(config('api.API_FEED_CONTENT') . '/startup', [
-                'user_id' => $request->user()['uid'],
+                'userId' => $request->user(),
                 'name' => $request->name,
                 'description' => $request->description,
                 'endingAt' => $request->ending_at,
-                'funds_goal' => $request->name,
+                'fundsGoal' => $request->funds_goal,
+                'status' => 'CREATED'
             ]);
             if (!$response->successful())
-                return response()->json(['message' => 'API_FEED_CONTENT startup error code: ' . $response->getStatusCode()], 500);
+                return Responder::error($response, 'API_FEED_CONTENT:startup:create');
+
             $startup = $response->object();
 
-            $documents = $request->file('documents');
-            $created_media = [];
-            foreach ($documents as $document) {
-                $response = Http::post(config('api.API_MEDIA') . '/media', [
-                    'user_id' => $request->user()['uid'],
-                    'is_public' => false,
-                    'mime_type' => $document->getMimeType(),
-                ]);
-                if (!$response->successful()) {
-                    $this->deleteMedia($created_media);
-                    return response()->json(['message' => 'API_MEDIA create error code: ' . $response->getStatusCode()], 500);
-                }
-
-                $media = $response->object();
-                $created_media[] = $media;
-                $response = Http::attach('file', fopen($document, 'r'), $document->getClientOriginalName())
-                    ->post(config('api.API_MEDIA') . '/media/' . $media->id . '/upload');
-                if (!$response->successful()) {
-                    $this->deleteMedia($created_media);
-                    return response()->json(['message' => 'API_MEDIA upload error code: ' . $response->getStatusCode()], 500);
-                }
-
-                $response = Http::post(config('api.API_FEED_CONTENT') . '/mediarelationship', [
-                    'mediable_type' => 'Startup',
-                    'mediable_id' => $startup->id,
-                    'media_id' => $media->id,
-                ]);
-                if (!$response->successful()) {
-                    $this->deleteMedia($created_media);
-                    return response()->json(['message' => 'API_FEED_CONTENT media relationsip error code: ' . $response->getStatusCode()], 500);
-                }
-            }
-            return response()->json(['message' => 'Successful',], 201);
+            $media = new MediaLinker($startup->id, 'Startup');
+            $files = $request->file('files');
+            $response = $media->attach($request->user(), $files, true);
+            if ($response->getStatusCode() != 200)
+                Http::delete(config('api.API_FEED_CONTENT') . '/startup/' . $startup->id);
+            return $response;
         }
 
         return response()->json([
@@ -84,11 +66,10 @@ class StartupController extends Controller
     {
         if (Gate::allows('creator')) {
             $response = Http::get(config('api.API_FEED_CONTENT') . '/startup', [
-                'userId' => $request->user()['uid'],
+                'userId' => $request->user(),
             ]);
             if (!$response->successful())
-                return response()->json(['message' => 'API_FEED_CONTENT startup error code: ' . $response->getStatusCode()], 500);
-
+                return Responder::error($response, 'API_FEED_CONTENT:startup:get');
             return response()->json($response->object(), 200);
         }
 

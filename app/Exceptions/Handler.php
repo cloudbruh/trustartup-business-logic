@@ -49,12 +49,12 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
-        if (env('APP_DEBUG'))
+        if (config('app.debug'))
             return parent::render($request, $exception);
 
         $rendered = parent::render($request, $exception);
         return response()->json([
-            'message' => $exception->getMessage(),
+            'message' => 'Something went wrong',
         ], $rendered->getStatusCode());
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\Responder;
 
 class ApplicationController extends Controller
 {
@@ -25,14 +26,14 @@ class ApplicationController extends Controller
                 return response()->json(['message' => 'API_FEED_CONTENT startup error code: ' . $response->getStatusCode()], 404);
 
             $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
-                'user_id' => $request->user()['uid'],
+                'user_id' => $request->user(),
                 'startup_id' => $request->startup_id,
             ]);
             if (count($response->object()))
                 return response()->json(['message' => 'Already created application for this startup'], 409);
 
             $response = Http::post(config('api.API_BUSINESS_CONTENT') . '/application', [
-                'user_id' => $request->user()['uid'],
+                'user_id' => $request->user(),
                 'startup_id' => $request->startup_id,
                 'message' => $request->message,
             ]);
