@@ -60,6 +60,7 @@ $app->singleton(
 */
 
 $app->configure('app');
+$app->configure('api');
 
 /*
 |--------------------------------------------------------------------------
@@ -72,9 +73,9 @@ $app->configure('app');
 |
 */
 
-// $app->middleware([
-//     App\Http\Middleware\ExampleMiddleware::class
-// ]);
+$app->middleware([
+    App\Http\Middleware\Authenticate::class
+]);
 
 // $app->routeMiddleware([
 //     'auth' => App\Http\Middleware\Authenticate::class,
@@ -92,8 +93,9 @@ $app->configure('app');
 */
 
 // $app->register(App\Providers\AppServiceProvider::class);
-// $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
+
+$app->register(App\Providers\AuthServiceProvider::class);
 
 if (env('APP_ENV') == 'local') {
     $app->register(Flipbox\LumenGenerator\LumenGeneratorServiceProvider::class);

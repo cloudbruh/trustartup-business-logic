@@ -2,9 +2,15 @@
 
 namespace App\Providers;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Carbon\Carbon;
+
+class User{
+
+}
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -15,7 +21,15 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        Gate::define('creator', function ($user) {
+            return collect($user['rls'])->contains('CREATOR');
+        });
+        Gate::define('moderator', function ($user) {
+            return collect($user['rls'])->contains('MODERATOR');
+        });
+        Gate::define('applicant', function ($user) {
+            return collect($user['rls'])->contains('APPLICANT');
+        });
     }
 
     /**
@@ -31,8 +45,16 @@ class AuthServiceProvider extends ServiceProvider
         // the User instance via an API token or any other method necessary.
 
         $this->app['auth']->viaRequest('api', function ($request) {
-            if ($request->input('api_token')) {
-                return User::where('api_token', $request->input('api_token'))->first();
+            $token = $request->bearerToken();
+            if ($token) {
+                try {
+                    $decoded = (array)JWT::decode($token, new Key(env('PUBLIC_KEY'), 'RS256'));
+                    if(Carbon::parse($decoded['exp'])->lt(Carbon::now()))
+                        return null;
+                    return $decoded;
+                } catch (\Throwable $e) {
+                    return null;
+                }
             }
         });
     }
