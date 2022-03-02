@@ -1,5 +1,5 @@
 services:
-  auth-system:
+  business-logic:
     build: .
     extra_hosts:
       - "host.docker.internal:host-gateway"
