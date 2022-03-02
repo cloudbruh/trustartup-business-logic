@@ -11,7 +11,7 @@ class Responder
         if (config('app.debug')) {
             return response()->json([
                 'where' => $message,
-                'response' => $response->json(),
+                'response' => $response->body(),
             ], 500);
         }
         return response()->json(['message' => 'Something went wrong'], 500);

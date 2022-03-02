@@ -37,6 +37,12 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('applicant', function ($user) {
             return $this->getUserRoles($user)->contains('APPLICANT');
         });
+        Gate::define('startup', function ($user, $startup) {
+            $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $startup);
+            if (!$response->successful())
+                return null;
+            return $response->json()['userId'] == $user;
+        });
     }
 
     /**

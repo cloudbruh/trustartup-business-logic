@@ -39,7 +39,7 @@ class MediaLinker
             ]);
             if (!$response->successful()) {
                 $this->revertTransaction();
-                return Responder::error($response, 'API_MEDIA:create');
+                return Responder::error($response, 'API_MEDIA:media:create');
             }
 
             $media = $response->object();
@@ -49,7 +49,7 @@ class MediaLinker
                 ->post(config('api.API_MEDIA') . '/media/' . $media->id . '/upload');
             if (!$response->successful()) {
                 $this->revertTransaction();
-                return Responder::error($response, 'API_MEDIA:upload');
+                return Responder::error($response, 'API_MEDIA:media:upload');
             }
 
             $response = Http::post(config('api.API_FEED_CONTENT') . '/mediarelationship', [

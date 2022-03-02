@@ -50,6 +50,6 @@ class UserController extends Controller
         $response = Http::get(config('api.API_USER') . '/user/' . $request->user());
         if (!$response->successful())
             return Responder::error($response, 'API_USER:user:get');
-        return response()->json($response->object(), 200);
+        return response()->json($response->json(), 200);
     }
 }

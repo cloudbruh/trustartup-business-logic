@@ -22,13 +22,19 @@ class ApplicationController extends Controller
                 return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
 
             $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $request->startup_id);
-            if (!$response->successful())
-                return response()->json(['message' => 'API_FEED_CONTENT startup error code: ' . $response->getStatusCode()], 404);
+            if ($response->getStatusCode() == 404)
+                return response()->json(['message' => 'Startup not found'], 404);
+            else if (!$response->successful())
+                return Responder::error($response, 'API_FEED_CONTENT:startup:get');
+            else if ($response->object()->userId == $request->user())
+                return response()->json(['message' => 'You cannot apply to your startup'], 403);
 
             $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
                 'user_id' => $request->user(),
                 'startup_id' => $request->startup_id,
             ]);
+            if (!$response->successful())
+                return Responder::error($response, 'API_BUSINESS_CONTENT:application:get');
             if (count($response->object()))
                 return response()->json(['message' => 'Already created application for this startup'], 409);
 
@@ -38,8 +44,7 @@ class ApplicationController extends Controller
                 'message' => $request->message,
             ]);
             if (!$response->successful())
-                return response()->json(['message' => 'API_BUSINESS_CONTENT error code: ' . $response->getStatusCode()], 500);
-
+                return Responder::error($response, 'API_BUSINESS_CONTENT:application:create');
 
             return response()->json(['message' => 'Successful',], 201);
         }
@@ -47,5 +52,43 @@ class ApplicationController extends Controller
         return response()->json([
             'message' => 'Forbidden',
         ], 403);
+    }
+
+    public function manage(Request $request)
+    {
+        $data = $request->only('status', 'application_id');
+        $validator = Validator::make($data, [
+            'application_id' => 'required|integer',
+            'status' => 'in:APPLIED,FIRED',
+        ]);
+        if ($validator->fails())
+            return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application/' . $request->application_id);
+        if ($response->getStatusCode() == 404)
+            return response()->json(['message' => 'Application not found'], 404);
+        else if (!$response->successful())
+            return Responder::error($response, 'API_BUSINESS_CONTENT:application:get');
+
+        $application = $response->object();
+        if (!Gate::allows('startup', $application->startup_id))
+            return response()->json(['message' => 'Forbidden'], 403);
+
+        $response = Http::put(config('api.API_BUSINESS_CONTENT')  . '/application', [
+            'id' => $request->application_id,
+            'status' => $request->status,
+        ]);
+        if (!$response->successful())
+            return Responder::error($response, 'API_BUSINESS_CONTENT:application:update');
+        return response()->json(['message' => 'Successful',], 200);
+    }
+
+    public function get(Request $request)
+    {
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
+            'user_id' => $request->user(),
+        ]);
+        if (!$response->successful())
+            return Responder::error($response, 'API_BUSINESS_CONTENT:application:get');
+        return response()->json($response->json(), 200);
     }
 }

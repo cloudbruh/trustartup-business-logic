@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\MediaLinker;
 use App\Helpers\Responder;
@@ -14,7 +15,6 @@ class PostController extends Controller
     {
         $data = $request->only('startup_id', 'header', 'text', 'files');
         $validator = Validator::make($data, [
-            'files' => 'required',
             'files.*' => 'file|image|max:5120',
             'header' => 'required|string|min:5|max:200',
             'text' => 'required|string|min:5|max:5000',
@@ -23,11 +23,7 @@ class PostController extends Controller
         if ($validator->fails())
             return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
 
-        $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $request->startup_id);
-        if (!$response->successful())
-            return Responder::error($response, 'API_FEED_CONTENT:startup:get');
-
-        if ($response->json()['userId'] != $request->user())
+        if (!Gate::allows('startup', $request->startup_id))
             return response()->json(['message' => 'Forbidden'], 403);
 
         $response = Http::post(config('api.API_FEED_CONTENT') . '/post', [
@@ -42,9 +38,12 @@ class PostController extends Controller
 
         $media = new MediaLinker($post->id, 'Post');
         $files = $request->file('files');
-        $response = $media->attach($request->user(), $files, true);
-        if ($response->getStatusCode() != 200)
-            Http::delete(config('api.API_FEED_CONTENT') . '/post/' . $post->id);
-        return $response;
+        if ($files) {
+            $response = $media->attach($request->user(), $files, true);
+            if ($response->getStatusCode() != 200)
+                Http::delete(config('api.API_FEED_CONTENT') . '/post/' . $post->id);
+            return $response;
+        } else
+            return response()->json(['message' => 'Successful',], 201);
     }
 }
