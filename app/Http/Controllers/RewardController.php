@@ -12,15 +12,11 @@ class RewardController extends Controller
 {
     public function get(Request $request)
     {
-        $response = Http::get(config('api.API_FEED_CONTENT') . '/startup', [
-            'userId' => $request->user(),
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/reward_user', [
+            'user_id' => $request->user(),
         ]);
         if (!$response->successful())
-            return Responder::error($response, 'API_FEED_CONTENT:startup:get');
+            return Responder::error($response, 'API_BUSINESS_CONTENT:reward_user:get');
         return response()->json($response->object(), 200);
-
-        return response()->json([
-            'message' => 'Forbidden',
-        ], 403);
     }
 }

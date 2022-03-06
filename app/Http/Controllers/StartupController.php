@@ -29,12 +29,12 @@ class StartupController extends Controller
             $response = Http::get(config('api.API_FEED_CONTENT') . '/startup', [
                 'userId' => $request->user(),
             ]);
-            if ($response->getStatusCode() != 200)
+            if (!$response->successful())
                 return Responder::error($response, 'API_FEED_CONTENT:startup:get');
 
             $startups = collect($response->object());
             if ($startups->pluck('status')->contains('Created'))
-                return response()->json(['message' => 'Already exists'], 409);
+                return response()->json(['message' => 'Already have not moderated startup'], 409);
 
             $response = Http::post(config('api.API_FEED_CONTENT') . '/startup', [
                 'userId' => $request->user(),
