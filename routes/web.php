@@ -23,7 +23,8 @@ $router->get('get_applications', 'ApplicationController@get');
 
 //requests
 $router->post('request_reward', 'RewardController@request');
-$router->post('request_role', 'DatasetController@request');
+$router->post('request_role', 'DatasetController@requestRole');
+$router->post('request_startup', 'DatasetController@requestStartup');
 $router->post('set_image', 'UserController@setMedia');
 $router->post('create_startup', 'StartupController@create');
 $router->post('apply_startup', 'ApplicationController@create');
@@ -32,10 +33,8 @@ $router->post('manage_worker', 'ApplicationController@manage');
 $router->post('create_post', 'PostController@create');
 $router->post('create_review', 'ReviewController@create');
 $router->post('donate', 'PaymentController@create');
+$router->post('create_reward', 'RewardController@create');
 
 //moderation
-$router->get('moderate_startup', 'ModeratorController@getStartup');
-$router->get('moderate_dataset', 'ModeratorController@getDataset');
-
-$router->post('moderate_startup', 'ModeratorController@startup');
-$router->post('moderate_dataset', 'ModeratorController@dataset');
+$router->get('moderate', 'ModeratorController@get');
+$router->post('moderate', 'ModeratorController@post');

@@ -12,7 +12,8 @@ use Carbon\Carbon;
 class AuthServiceProvider extends ServiceProvider
 {
 
-    private function getUserRoles($user){
+    private function getUserRoles($user)
+    {
         $response = Http::get(config('api.API_USER') . '/user/' . $user);
         if (!$response->successful())
             return collect();
@@ -62,7 +63,7 @@ class AuthServiceProvider extends ServiceProvider
             if ($token) {
                 try {
                     $decoded = (array)JWT::decode($token, new Key(env('PUBLIC_KEY'), 'RS256'));
-                    if(Carbon::parse($decoded['exp'])->lt(Carbon::now()))
+                    if (Carbon::parse($decoded['exp'])->lt(Carbon::now()))
                         return null;
                     return $decoded['uid'];
                 } catch (\Throwable $e) {

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\Responder;
+use App\Helpers\Media;
 
 class UserController extends Controller
 {
@@ -20,20 +20,9 @@ class UserController extends Controller
             return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
 
         $file = $request->file('file');
-        $response = Http::post(config('api.API_MEDIA') . '/media', [
-            'userId' => $request->user(),
-            'isPublic' => true,
-            'mimeType' => $file->getMimeType(),
-        ]);
-        if (!$response->successful())
-            return Responder::error($response, 'API_MEDIA:media:create');
-
-        $file = $request->file('file');
-        $media = $response->object();
-        $response = Http::attach('file', fopen($file, 'r'), $file->getClientOriginalName())
-            ->post(config('api.API_MEDIA') . '/media/' . $media->id . '/upload');
-        if (!$response->successful())
-            return Responder::error($response, 'API_MEDIA:media:upload');
+        $media = Media::uploadMedia($file, $request->user(), true);
+        if(!$media)
+            return Responder::error(null, 'API_MEDIA:media:upload');
 
         $response = Http::put(config('api.API_USER') . '/user', [
             'id' => $request->user(),

@@ -48,7 +48,6 @@ class ApplicationController extends Controller
 
             return response()->json(['message' => 'Successful',], 201);
         }
-
         return response()->json([
             'message' => 'Forbidden',
         ], 403);

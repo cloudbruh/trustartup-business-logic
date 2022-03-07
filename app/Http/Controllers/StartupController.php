@@ -56,7 +56,6 @@ class StartupController extends Controller
                 Http::delete(config('api.API_FEED_CONTENT') . '/startup/' . $startup->id);
             return $response;
         }
-
         return response()->json([
             'message' => 'Forbidden',
         ], 403);
@@ -72,7 +71,6 @@ class StartupController extends Controller
                 return Responder::error($response, 'API_FEED_CONTENT:startup:get');
             return response()->json($response->object(), 200);
         }
-
         return response()->json([
             'message' => 'Forbidden',
         ], 403);

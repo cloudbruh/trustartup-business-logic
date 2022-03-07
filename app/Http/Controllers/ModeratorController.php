@@ -11,13 +11,25 @@ use App\Helpers\Media;
 
 class ModeratorController extends Controller
 {
-    public function getDataset(Request $request){
-        if (Gate::allows('applicant')) {
+    public function get(Request $request)
+    {
+        if (Gate::allows('moderator')) {
             $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/dataset');
             if ($response->getStatusCode() != 200)
                 return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
-            $datasets = collect($response->object())->whereIn('status', ['CREATED', 'PENDING']);
-            foreach($datasets as $dataset){
+            $datasets = collect($response->object());
+            foreach ($datasets as $dataset) {
+                if ($dataset->moderatable_type == 'STARTUP') {
+                    $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $dataset->moderatable_id);
+                    if ($response->getStatusCode() != 200)
+                        return Responder::error($response, 'API_FEED_CONTENT:startup:get');
+                    $dataset->moderatable_object = $response->object();
+                } else if ($dataset->moderatable_type == 'ROLE_APPLICANT' || $dataset->moderatable_type == 'ROLE_CREATOR') {
+                    $response = Http::get(config('api.API_USER') . '/user/' . $dataset->moderatable_id);
+                    if ($response->getStatusCode() != 200)
+                        return Responder::error($response, 'API_USER:user:get');
+                    $dataset->moderatable_object = $response->object();
+                }
                 $response = Http::get(config('api.API_FEED_CONTENT') . '/mediarelationship', [
                     'mediableType' => 'Dataset',
                     'mediableId' => $dataset->id,
@@ -28,33 +40,18 @@ class ModeratorController extends Controller
             }
             return response()->json($datasets, 200);
         }
+        return response()->json([
+            'message' => 'Forbidden',
+        ], 403);
     }
 
-    public function getStartup(Request $request){
-        if (Gate::allows('applicant')) {
-            $response = Http::get(config('api.API_FEED_CONTENT') . '/startup');
-            if ($response->getStatusCode() != 200)
-                return Responder::error($response, 'API_FEED_CONTENT:startup:get');
-            $startups = collect($response->object())->whereIn('status', ['Created', 'Pending']);
-            foreach($startups as $startup){
-                $response = Http::get(config('api.API_FEED_CONTENT') . '/mediarelationship', [
-                    'mediableType' => 'Startup',
-                    'mediableId' => $startup->id,
-                ]);
-                if ($response->getStatusCode() != 200)
-                    return Responder::error($response, 'API_FEED_CONTENT:mediarelationship:get');
-                $startup->media = Media::getMediaByIds(collect($response->object())->pluck('mediaId'));
-            }
-            return response()->json($startups, 200);
-        }
-    }
-
-    public function dataset(Request $request){
-        if (Gate::allows('applicant')) {
+    public function post(Request $request)
+    {
+        if (Gate::allows('moderator')) {
             $data = $request->only('dataset_id', 'status', 'comment');
             $validator = Validator::make($data, [
                 'dataset_id' => 'required|integer',
-                'status' => 'in:PENDING,VALIDATED,DENIED',
+                'status' => 'in:PENDING,GRANTED,PROHIBITED',
                 'comment' => 'string'
             ]);
             if ($validator->fails())
@@ -65,35 +62,31 @@ class ModeratorController extends Controller
             else if (!$response->successful())
                 return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
 
+            if ($request->status == 'GRANTED') {
+                $dataset = $response->object();
+                if ($dataset->moderatable_type == 'STARTUP') {
+                    $response = Http::put(config('api.API_FEED_CONTENT') . '/startup/' . $dataset->moderatable_id, [
+                        'status' => 'Published',
+                    ]);
+                    if (!$response->successful())
+                        return Responder::error($response, 'API_FEED_CONTENT:startup:update');
+                } else if ($dataset->moderatable_type == 'ROLE_CREATOR') {
+                    $response = Http::post(config('api.API_USER') . '/user/' . $dataset->moderatable_id . '/roles', [
+                        'type' => 'CREATOR',
+                    ]);
+                    if (!$response->successful())
+                        return Responder::error($response, 'API_USER:role:create');
+                } else if ($dataset->moderatable_type == 'ROLE_APPLICANT') {
+                    $response = Http::post(config('api.API_USER') . '/user/' . $dataset->moderatable_id . '/roles', [
+                        'type' => 'APPLICANT',
+                    ]);
+                    if (!$response->successful())
+                        return Responder::error($response, 'API_USER:role:create');
+                }
+            }
+
             $response = Http::put(config('api.API_BUSINESS_CONTENT') . '/dataset', [
                 'id' => $request->dataset_id,
-                'status' => $request->status,
-                'comment' => $request->comment,
-            ]);
-            if (!$response->successful())
-                return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:update');
-
-            return response()->json(['message' => 'Successful',], 200);
-        }
-    }
-
-    public function startup(Request $request){
-        if (Gate::allows('applicant')) {
-            $data = $request->only('startup_id', 'status', 'comment');
-            $validator = Validator::make($data, [
-                'startup_id' => 'required|integer',
-                'status' => 'in:Published',
-                'comment' => 'string'
-            ]);
-            if ($validator->fails())
-                return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
-            $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $request->startup_id);
-            if ($response->getStatusCode() == 404)
-                return response()->json(['message' => 'Startup not found'], 404);
-            else if (!$response->successful())
-                return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
-
-            $response = Http::put(config('api.API_FEED_CONTENT') . '/startup/' . $request->startup_id, [
                 'status' => $request->status,
                 'comment' => $request->comment,
             ]);
