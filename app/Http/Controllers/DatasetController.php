@@ -31,9 +31,9 @@ class DatasetController extends Controller
             return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
 
         $datasets = collect($response->object());
-        if (count($datasets->where('status', 'GRANTED')->where('type', 'ROLE_' . $request->type)))
+        if (count($datasets->where('status', 'GRANTED')->where('moderatable_type', 'ROLE_' . $request->type)))
             return response()->json(['message' => 'Already have this role'], 409);
-        if (count($datasets->where('status', 'CREATED')->where('type', 'ROLE_' . $request->type)))
+        if (count($datasets->where('status', 'CREATED')->where('moderatable_type', 'ROLE_' . $request->type)))
             return response()->json(['message' => 'Already requested this role'], 409);
 
         $response = Http::post(config('api.API_BUSINESS_CONTENT') . '/dataset', [
@@ -49,7 +49,7 @@ class DatasetController extends Controller
         $media = new MediaLinker($dataset->id, 'Dataset');
         $files = $request->file('files');
         $response = $media->attach($request->user(), $files, false);
-        if (!$response->successful())
+        if ($response->getStatusCode() != 200)
             Http::delete(config('api.API_BUSINESS_CONTENT') . '/dataset/' . $dataset->id);
         return $response;
     }
@@ -93,7 +93,7 @@ class DatasetController extends Controller
         if ($files) {
             $media = new MediaLinker($dataset->id, 'Dataset');
             $response = $media->attach($request->user(), $files, false);
-            if (!$response->successful())
+            if ($response->getStatusCode() != 200)
                 Http::delete(config('api.API_BUSINESS_CONTENT') . '/dataset/' . $dataset->id);
             return $response;
         } else
