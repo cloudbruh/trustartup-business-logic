@@ -63,4 +63,4 @@ docker-compose up -d
 
 ## API
 
-[Полная api-документация в формате OpenAPI3.0](https://www.getpostman.com/collections/55f7312f1709719beae1)
+[Полная api-документация в формате OpenAPI3.0](https://www.getpostman.com/collections/fbb18529532803b00ac2)
