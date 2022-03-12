@@ -1,9 +1,8 @@
-FROM php:7.4-fpm-alpine
-
-WORKDIR /var/www/html/
+FROM dwchiang/nginx-php-fpm:7.4.25-fpm-alpine3.14-nginx-1.21.1
 
 RUN php -r "readfile('http://getcomposer.org/installer');" | php -- --install-dir=/usr/bin/ --filename=composer
 
-COPY . .
+COPY public /usr/share/nginx/html
+COPY . /var/www/html
 
-RUN composer install --no-dev
+RUN composer install --no-dev --working-dir=/var/www/html
