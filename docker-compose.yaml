@@ -8,7 +8,7 @@ services:
     environment:
       - APP_ENV=production
       - APP_KEY=yIcTghI5UqQY6z3IjTCupEbHMYPH73gJ
-      - APP_DEBUG=true
+      - APP_DEBUG=false
       - API_BUSINESS_CONTENT=http://host.docker.internal:8086
       - API_FEED_CONTENT=http://host.docker.internal:8081
       - API_MEDIA=http://host.docker.internal:8083
