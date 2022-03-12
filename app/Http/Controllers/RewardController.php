@@ -75,7 +75,24 @@ class RewardController extends Controller
 
         $reward = $response->object();
 
-        //check donation minimum TODO
+        $response = Http::get(config('api.API_PAYMENT') . '/payment/sum', [
+            'user_id' => $request->user(),
+        ]);
+        if (!$response->successful())
+            return Responder::error($response, 'API_PAYMENT:payment_sum:get');
+
+        if ((float)$reward->donationMinimum > (float)$response->json())
+            return response()->json(['message' => 'Not enough donation'], 402);
+
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/reward_user', [
+            'user_id' => $request->user(),
+            'reward_id' => $reward->id,
+        ]);
+
+        if (!$response->successful())
+            return Responder::error($response, 'API_BUSINESS_CONTENT:reward_user:get');
+        if (count($response->object()))
+            return response()->json(['message' => 'Already requested this type of reward'], 409);
 
         $response = Http::post(config('api.API_BUSINESS_CONTENT') . '/reward_user', [
             'user_id' => $request->user(),

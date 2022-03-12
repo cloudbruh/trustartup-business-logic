@@ -21,7 +21,7 @@ class UserController extends Controller
 
         $file = $request->file('file');
         $media = Media::uploadMedia($file, $request->user(), true);
-        if(!$media)
+        if (!$media)
             return Responder::error(null, 'API_MEDIA:media:upload');
 
         $response = Http::put(config('api.API_USER') . '/user', [
@@ -39,6 +39,14 @@ class UserController extends Controller
         $response = Http::get(config('api.API_USER') . '/user/' . $request->user());
         if (!$response->successful())
             return Responder::error($response, 'API_USER:user:get');
-        return response()->json($response->json(), 200);
+        $user = $response->object();
+        $user->media = null;
+        if ($user->media_id) {
+            $response = Http::get(config('api.API_MEDIA') . '/media/' . $user->media_id);
+            if (!$response->successful())
+                return Responder::error($response, 'API_MEDIA:media:get');
+            $user->media = $response->object()->link;
+        }
+        return response()->json(collect($user)->except('media_id'), 200);
     }
 }

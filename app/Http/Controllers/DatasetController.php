@@ -115,7 +115,13 @@ class DatasetController extends Controller
             ]);
             if (!$response->successful())
                 return Responder::error($response, 'API_FEED_CONTENT:mediarelationship:get');
-            $dataset->media = Media::getMediaByIds(collect($response->object())->pluck('mediaId'));
+            $media = collect($response->object())->pluck('mediaId');
+            foreach ($media as $i) {
+                $response = Http::get(config('api.API_MEDIA') . '/media/' . $i);
+                if (!$response->successful())
+                    return Responder::error($response, 'API_MEDIA:media:get');
+                $dataset->media[] = $response->object()->link;
+            }
         }
         return response()->json($datasets, 200);
     }

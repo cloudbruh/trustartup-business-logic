@@ -36,7 +36,13 @@ class ModeratorController extends Controller
                 ]);
                 if ($response->getStatusCode() != 200)
                     return Responder::error($response, 'API_FEED_CONTENT:mediarelationship:get');
-                $dataset->media = Media::getMediaByIds(collect($response->object())->pluck('mediaId'));
+                $media = collect($response->object())->pluck('mediaId');
+                foreach ($media as $i) {
+                    $response = Http::get(config('api.API_MEDIA') . '/media/' . $i);
+                    if (!$response->successful())
+                        return Responder::error($response, 'API_MEDIA:media:get');
+                    $dataset->media[] = $response->object()->link;
+                }
             }
             return response()->json($datasets, 200);
         }
@@ -62,12 +68,23 @@ class ModeratorController extends Controller
             else if (!$response->successful())
                 return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
 
+            $dataset = $response->object();
+            if ($dataset->moderatable_type == 'STARTUP') {
+                $response = Http::get(config('api.API_FEED_CONTENT') . '/startup/' . $dataset->moderatable_id);
+                if ($response->getStatusCode() != 200)
+                    return Responder::error($response, 'API_FEED_CONTENT:startup:get');
+                $dataset->moderatable_object = $response->object();
+            } else if ($dataset->moderatable_type == 'ROLE_APPLICANT' || $dataset->moderatable_type == 'ROLE_CREATOR') {
+                $response = Http::get(config('api.API_USER') . '/user/' . $dataset->moderatable_id);
+                if ($response->getStatusCode() != 200)
+                    return Responder::error($response, 'API_USER:user:get');
+                $dataset->moderatable_object = $response->object();
+            }
+
             if ($request->status == 'GRANTED') {
-                $dataset = $response->object();
                 if ($dataset->moderatable_type == 'STARTUP') {
-                    $response = Http::put(config('api.API_FEED_CONTENT') . '/startup/' . $dataset->moderatable_id, [
-                        'status' => 'Published',
-                    ]);
+                    $dataset->moderatable_object->status = 'Published';
+                    $response = Http::put(config('api.API_FEED_CONTENT') . '/startup/' . $dataset->moderatable_id, (array)$dataset->moderatable_object);
                     if (!$response->successful())
                         return Responder::error($response, 'API_FEED_CONTENT:startup:update');
                 } else if ($dataset->moderatable_type == 'ROLE_CREATOR') {
