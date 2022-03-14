@@ -19,7 +19,8 @@ $router->get('current_user', 'UserController@get');
 $router->get('get_reviews', 'ReviewController@get');
 $router->get('get_rewards', 'RewardController@get');
 $router->get('get_datasets', 'DatasetController@get');
-$router->get('get_applications', 'ApplicationController@get');
+$router->get('get_applications', 'ApplicationController@getMyApplications');
+$router->get('startup_applications', 'ApplicationController@getStartupApplications');
 
 //requests
 $router->post('request_reward', 'RewardController@request');

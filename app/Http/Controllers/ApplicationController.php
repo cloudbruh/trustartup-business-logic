@@ -62,7 +62,10 @@ class ApplicationController extends Controller
         ]);
         if ($validator->fails())
             return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
-        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application/' . $request->application_id);
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
+            'user_id' => $request->user(),
+            'startup_id' => $request->startup_id,
+        ]);
         if ($response->getStatusCode() == 404)
             return response()->json(['message' => 'Application not found'], 404);
         else if (!$response->successful())
@@ -81,10 +84,28 @@ class ApplicationController extends Controller
         return response()->json(['message' => 'Successful',], 200);
     }
 
-    public function get(Request $request)
+    public function getMyApplications(Request $request)
     {
         $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
             'user_id' => $request->user(),
+        ]);
+        if (!$response->successful())
+            return Responder::error($response, 'API_BUSINESS_CONTENT:application:get');
+        return response()->json($response->json(), 200);
+    }
+
+    public function getStartupApplications(Request $request)
+    {
+        $data = $request->only('startup_id');
+        $validator = Validator::make($data, [
+            'startup_id' => 'required|integer',
+        ]);
+        if ($validator->fails())
+            return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
+        if (!Gate::allows('startup', $request->startup_id))
+            return response()->json(['message' => 'Forbidden'], 403);
+        $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
+            'startup_id' => $request->startup_id,
         ]);
         if (!$response->successful())
             return Responder::error($response, 'API_BUSINESS_CONTENT:application:get');
