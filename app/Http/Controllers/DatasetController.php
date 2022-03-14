@@ -70,6 +70,7 @@ class DatasetController extends Controller
 
         $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/dataset', [
             'moderatable_id' => $request->startup_id,
+            'moderatable_type' => 'STARTUP',
         ]);
         if (!$response->successful())
             return Responder::error($response, 'API_BUSINESS_CONTENT:dataset:get');
