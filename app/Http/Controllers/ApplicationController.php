@@ -102,8 +102,8 @@ class ApplicationController extends Controller
         ]);
         if ($validator->fails())
             return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 400);
-        if (!Gate::allows('startup', $request->startup_id))
-            return response()->json(['message' => 'Forbidden'], 403);
+        // if (!Gate::allows('startup', $request->startup_id))
+        //     return response()->json(['message' => 'Forbidden'], 403);
         $response = Http::get(config('api.API_BUSINESS_CONTENT') . '/application', [
             'startup_id' => $request->startup_id,
         ]);
