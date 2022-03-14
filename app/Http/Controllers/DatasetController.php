@@ -37,6 +37,7 @@ class DatasetController extends Controller
             return response()->json(['message' => 'Already requested this role'], 409);
 
         $response = Http::post(config('api.API_BUSINESS_CONTENT') . '/dataset', [
+            'user_id' => $request->user(),
             'moderatable_id' => $request->user(),
             'moderatable_type' => 'ROLE_' . $request->type,
             'content' => $request->content,
@@ -82,6 +83,7 @@ class DatasetController extends Controller
             return response()->json(['message' => 'Already granted'], 409);
 
         $response = Http::post(config('api.API_BUSINESS_CONTENT') . '/dataset', [
+            'user_id' => $request->user(),
             'moderatable_id' => $request->startup_id,
             'moderatable_type' => 'STARTUP',
             'content' => $request->content,
